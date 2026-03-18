@@ -564,6 +564,28 @@
 	
 	
 	
+/* Estilos para fluxo de processo */
+.fluxo-etapa-simbolo {
+  font-size: 1.5rem;
+  text-align: center;
+  color: var(--color-primary);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0.1rem;
+}
+
+.fluxo-etapa-nome {
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.fluxo-etapa-descricao {
+  font-size: 0.9em;
+  color: var(--color-gray-600);
+  margin-top: 0.25rem;
+}
+
 /* Oculta cards QFD por padrão */
 .card.qfd {
   display: none;
@@ -678,13 +700,12 @@ body.has-qfd .card.qfd {
       <div id="contradicoes" class="corpoCard" data-mode="replace"></div>
     </div>
 	
-    <div class="card qfd">
-      <div class="tituloCard">Estratégia de Priorização</div>
-      <div id="estrategiaPriorizacao" class="corpoCard" data-mode="replace">
-		<div id='listaRequisitosPriorizados'>
+	<div class="card">
+		<div class="fluxo-processo" id="fluxo-processo" data-json-skip>
+		  <div class="tituloCard">Fluxo do Processo</div>
+		  <div id="fluxo-processo-tabela"></div>
 		</div>
-	  </div>
-    </div>
+	</div>
 	
 	
   </div>
@@ -694,23 +715,14 @@ body.has-qfd .card.qfd {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <script>
+
+
+
+
+
+
+
     // Script para popular os campos básicos
     document.addEventListener('DOMContentLoaded', () => {
       const dataTag = document.getElementById('reportData');
@@ -1974,6 +1986,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+<script>
+// Script para renderizar o fluxo de processo
+document.addEventListener('DOMContentLoaded', () => {
+  const dataTag = document.getElementById('reportData');
+  if (!dataTag) return;
+
+  let data = {};
+  try {
+    data = JSON.parse(dataTag.textContent || '{}');
+  } catch (e) {
+    return;
+  }
+
+  const container = document.getElementById('fluxo-processo');
+  const tabela = document.getElementById('fluxo-processo-tabela');
+  const fluxo = data['fluxo-processo'];
+
+  if (!fluxo || !Array.isArray(fluxo) || fluxo.length === 0) {
+    if (container) container.style.display = 'none';
+    return;
+  }
+
+  const simbolos = {
+    'Ovais': '&#11052;',
+    'Retangulo': '&#9644;',
+    'Losango': '&#9670;',
+    'Paralelogramo': '&#9648;'
+  };
+  
+  
+  function safeText(v) {
+    const span = document.createElement('span');
+    span.textContent = v == null ? '' : String(v);
+    return span.innerHTML;
+  }
+
+  let html = '<div class="container-fluid px-0">';
+  let indentCounter = 0;
+  fluxo.forEach(etapa => {
+    const simbolo = simbolos[etapa.simbolo] || '';
+    const nome = etapa['nome-etapa'] || '';
+    const descricao = etapa['descricao-etapa'] || '';
+    const isOval = etapa.simbolo === 'Ovais';
+    const isLosango = etapa.simbolo === 'Losango';
+
+    const simboloCor = isOval ? 'color: var(--color-accent);' : '';
+    const rowIndent = (!isLosango && indentCounter > 0) ? 'margin-left: 10px;' : '';
+
+    if (isLosango) {
+      indentCounter = 2;
+    } else if (indentCounter > 0) {
+      indentCounter--;
+    }
+
+    html += `
+      <div class="row mb-2 align-items-start" style="${rowIndent}">
+        <div class="col-auto fluxo-etapa-simbolo" style="${simboloCor}">${simbolo}</div>
+        <div class="col">
+          <div class="fluxo-etapa-nome">${safeText(nome)}</div>
+          <div class="fluxo-etapa-descricao">${safeText(descricao)}</div>
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+
+  if (tabela) tabela.innerHTML = html;
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
