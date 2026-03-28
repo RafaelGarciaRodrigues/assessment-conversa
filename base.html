@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
   <style>
     :root {
@@ -598,9 +599,89 @@ body.has-qfd .card.qfd {
 	
 
 
+/*FLUXOGRAMA*/
+
+#cf .label text, #cf span, #cf p {
+	color: var(--color-secondary) !important;
+}
+#cf .node rect, #cf .node circle, #cf .node ellipse, #cf .node polygon, #cf .node path {
+    fill: var(--color-light) !important;
+    stroke: var(--color-secondary) !important;
+    stroke-width: 1px;
+}
+
+#cf .flowchart-link {
+    stroke: var(--color-secondary) !important;
+}
+#cf .edgeLabel {
+    background-color: var(--color-light) !important;
+	color: var(--color-secondary) !important;
+    text-align: center;
+}
 
 
 
+	#nomeParticipantes {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    #nomeParticipantes ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #nomeParticipantes li {
+      background: var(--color-gray-100);
+      margin-bottom: 16px;
+      padding: 20px;
+      border-radius: var(--border-radius);
+      border-left: 5px solid var(--color-primary);
+      transition: all 0.3s ease;
+    }
+
+    #nomeParticipantes li:hover {
+      transform: translateX(4px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Container de cada participante */
+    .participante-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Nome do participante */
+    .participante-nome {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+    }
+
+    /* Responsabilidade */
+    .participante-responsabilidade {
+      font-size: 0.9rem;
+      color: var(--color-gray-700);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* Estilo opcional para melhorar legibilidade */
+    .participante-container::before {
+      content: "👤";
+      font-size: 1.4rem;
+      margin-right: 10px;
+      opacity: 0.7;
+    }
 	
   </style>
 
@@ -612,7 +693,7 @@ body.has-qfd .card.qfd {
 </head>
 <body>
   <div class="quadroGeral">
-    <div id="Titulo"><h1>Título Macro Assunto</h1></div>
+    <div><h1 id="titulo">Título Macro Assunto</h1></div>
     <div id="problema_central"></div>
 
     <div class="card">
@@ -703,7 +784,7 @@ body.has-qfd .card.qfd {
 	<div class="card">
 		<div class="fluxo-processo" id="fluxo-processo" data-json-skip>
 		  <div class="tituloCard">Fluxo do Processo</div>
-		  <div id="fluxo-processo-tabela"></div>
+		  <div id="diagram-fluxo-processo"></div>
 		</div>
 	</div>
 	
@@ -711,8 +792,237 @@ body.has-qfd .card.qfd {
   </div>
 
 
+<script>
+// ─────────────────────────────────────────────────────────────
+// ✏️  EDITE O PSEUDOCÓDIGO AQUI
+//
+//  Notação suportada:
+//    Qualquer texto;          → nó/passo
+//    if(condição?) { ... }    → decisão
+//    else { ... }             → ramo alternativo
+//    while(condição?) { ... } → loop
+//    // comentário            → ignorado
+// ─────────────────────────────────────────────────────────────
+const codigoFluxoMapeado = `
+###PSEUDOCODIGO_FLUXO_PROCESSO###
+`;
+// ─────────────────────────────────────────────────────────────
 
 
+// ══════════════════════════════════════════
+//  TOKENIZADOR
+// ══════════════════════════════════════════
+function tokenize(code) {
+  const tokens = [];
+  for (let line of code.split('\n')) {
+    line = line.trim();
+    if (!line) continue;
+
+    // remove comentários de linha
+    const ci = line.indexOf('//');
+    if (ci === 0) continue;
+    if (ci > 0) line = line.substring(0, ci).trim();
+    if (!line) continue;
+
+    if (line === '{') { tokens.push({ type: 'lbrace' }); continue; }
+    if (line === '}' || line === '};') { tokens.push({ type: 'rbrace' }); continue; }
+
+    if (/^else/.test(line)) {
+      tokens.push({ type: 'else' });
+      if (line.includes('{')) tokens.push({ type: 'lbrace' });
+      continue;
+    }
+
+    const ifm = line.match(/^if\s*\((.+)\)\s*(\{?)$/);
+    if (ifm) {
+      tokens.push({ type: 'if', condition: ifm[1] });
+      if (ifm[2] === '{') tokens.push({ type: 'lbrace' });
+      continue;
+    }
+
+    const wm = line.match(/^while\s*\((.+)\)\s*(\{?)$/);
+    if (wm) {
+      tokens.push({ type: 'while', condition: wm[1] });
+      if (wm[2] === '{') tokens.push({ type: 'lbrace' });
+      continue;
+    }
+
+    if (line.endsWith(';')) {
+      tokens.push({ type: 'stmt', text: line.slice(0, -1).trim() });
+    }
+  }
+  return tokens;
+}
+
+
+// ══════════════════════════════════════════
+//  PARSER → AST
+// ══════════════════════════════════════════
+// Retorna [lista de nós AST, nova posição]
+function parseBlock(tokens, pos) {
+  const stmts = [];
+  while (pos < tokens.length && tokens[pos]?.type !== 'rbrace') {
+    const tok = tokens[pos];
+
+    if (tok.type === 'stmt') {
+      stmts.push({ type: 'stmt', text: tok.text });
+      pos++;
+
+    } else if (tok.type === 'if') {
+      pos++;
+      let then = [], els = [];
+
+      if (tokens[pos]?.type === 'lbrace') {
+        pos++;
+        [then, pos] = parseBlock(tokens, pos);
+        if (tokens[pos]?.type === 'rbrace') pos++;
+      } else if (tokens[pos]?.type === 'stmt') {
+        then = [{ type: 'stmt', text: tokens[pos].text }];
+        pos++;
+      }
+
+      if (tokens[pos]?.type === 'else') {
+        pos++;
+        if (tokens[pos]?.type === 'lbrace') {
+          pos++;
+          [els, pos] = parseBlock(tokens, pos);
+          if (tokens[pos]?.type === 'rbrace') pos++;
+        } else if (tokens[pos]?.type === 'stmt') {
+          els = [{ type: 'stmt', text: tokens[pos].text }];
+          pos++;
+        }
+      }
+      stmts.push({ type: 'if', condition: tok.condition, then, else: els });
+
+    } else if (tok.type === 'while') {
+      pos++;
+      let body = [];
+
+      if (tokens[pos]?.type === 'lbrace') {
+        pos++;
+        [body, pos] = parseBlock(tokens, pos);
+        if (tokens[pos]?.type === 'rbrace') pos++;
+      } else if (tokens[pos]?.type === 'stmt') {
+        body = [{ type: 'stmt', text: tokens[pos].text }];
+        pos++;
+      }
+      stmts.push({ type: 'while', condition: tok.condition, body });
+
+    } else {
+      pos++;
+    }
+  }
+  return [stmts, pos];
+}
+
+
+// ══════════════════════════════════════════
+//  GERADOR MERMAID
+// ══════════════════════════════════════════
+let _nodeCount = 0;
+const _lines = [];
+
+function _newNode(label, diamond = false) {
+  const id = 'N' + _nodeCount++;
+  const safe = label.replace(/"/g, "'");
+  _lines.push(diamond ? `  ${id}{"${safe}"}` : `  ${id}["${safe}"]`);
+  return id;
+}
+
+function _connect(from, to, label = '') {
+  _lines.push(label ? `  ${from} -->|${label}| ${to}` : `  ${from} --> ${to}`);
+}
+
+// Retorna { entry: id|null, exits: [{id, label}] }
+function _gen(stmts) {
+  let firstEntry = null;
+  let pending = [];
+
+  const flush = (targetId) => {
+    for (const p of pending) _connect(p.id, targetId, p.label);
+    pending = [];
+  };
+
+  for (const stmt of stmts) {
+    if (stmt.type === 'stmt') {
+      const id = _newNode(stmt.text);
+      if (firstEntry === null) firstEntry = id;
+      flush(id);
+      pending = [{ id, label: '' }];
+
+    } else if (stmt.type === 'if') {
+      const id = _newNode(stmt.condition, true);
+      if (firstEntry === null) firstEntry = id;
+      flush(id);
+
+      const thenR = _gen(stmt.then);
+      const elsR  = _gen(stmt.else);
+
+      if (thenR.entry) _connect(id, thenR.entry, 'Sim');
+      if (elsR.entry)  _connect(id, elsR.entry,  'Não');
+
+      pending = [];
+      // saídas do ramo then
+      if (thenR.entry) pending.push(...thenR.exits);
+      else             pending.push({ id, label: 'Sim' });
+      // saídas do ramo else (ou bypass "Não" se não tiver else)
+      if (elsR.entry)  pending.push(...elsR.exits);
+      else             pending.push({ id, label: 'Não' });
+
+    } else if (stmt.type === 'while') {
+      const id = _newNode(stmt.condition, true);
+      if (firstEntry === null) firstEntry = id;
+      flush(id);
+
+      const bodyR = _gen(stmt.body);
+      if (bodyR.entry) {
+        _connect(id, bodyR.entry, 'Sim');
+        for (const ex of bodyR.exits) _connect(ex.id, id, ex.label);
+      }
+
+      pending = [{ id, label: 'Não' }];
+    }
+  }
+
+  return { entry: firstEntry, exits: pending };
+}
+
+function gerarMermaid(code) {
+  _nodeCount = 0;
+  _lines.length = 0;
+  _lines.push('flowchart TD');
+
+  const tokens = tokenize(code);
+  const [ast]  = parseBlock(tokens, 0);
+  _gen(ast);
+
+  return _lines.join('\n');
+}
+
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'light',
+  themeVariables: {
+    darkMode: false,
+    primaryColor: '#61903E',
+    primaryTextColor: '#4E6D5D',
+    primaryBorderColor: '#4E6D5D',
+    lineColor: '#343a40',
+    edgeLabelBackground: '#fff',
+  },
+  flowchart: { curve: 'basis', padding: 28 }
+});
+
+(async () => {
+  const syntax = gerarMermaid(codigoFluxoMapeado);
+  const { svg } = await mermaid.render('cf', syntax);
+  document.getElementById('diagram-fluxo-processo').innerHTML = svg;
+})();
+</script>
 
 
 <script>
@@ -1984,77 +2294,37 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-
-
-
 <script>
-// Script para renderizar o fluxo de processo
-document.addEventListener('DOMContentLoaded', () => {
-  const dataTag = document.getElementById('reportData');
-  if (!dataTag) return;
+    function formatarParticipantes() {
+      const container = document.getElementById('nomeParticipantes');
+      const items = container.querySelectorAll('li');
 
-  let data = {};
-  try {
-    data = JSON.parse(dataTag.textContent || '{}');
-  } catch (e) {
-    return;
-  }
+      items.forEach(item => {
+        const texto = item.textContent.trim();
+        
+        // Extrai os valores usando regex (mais seguro que JSON.parse para esse formato)
+        const participanteMatch = texto.match(/"participante":"([^"]+)"/);
+        const responsabilidadeMatch = texto.match(/"responsabilidade":"([^"]+)"/);
 
-  const container = document.getElementById('fluxo-processo');
-  const tabela = document.getElementById('fluxo-processo-tabela');
-  const fluxo = data['fluxo-processo'];
+        if (participanteMatch && responsabilidadeMatch) {
+          const nome = participanteMatch[1];
+          const responsabilidade = responsabilidadeMatch[1];
 
-  if (!fluxo || !Array.isArray(fluxo) || fluxo.length === 0) {
-    if (container) container.style.display = 'none';
-    return;
-  }
-
-  const simbolos = {
-    'Ovais': '&#11052;',
-    'Retangulo': '&#9644;',
-    'Losango': '&#9670;',
-    'Paralelogramo': '&#9648;'
-  };
-  
-  
-  function safeText(v) {
-    const span = document.createElement('span');
-    span.textContent = v == null ? '' : String(v);
-    return span.innerHTML;
-  }
-
-  let html = '<div class="container-fluid px-0">';
-  let indentCounter = 0;
-  fluxo.forEach(etapa => {
-    const simbolo = simbolos[etapa.simbolo] || '';
-    const nome = etapa['nome-etapa'] || '';
-    const descricao = etapa['descricao-etapa'] || '';
-    const isOval = etapa.simbolo === 'Ovais';
-    const isLosango = etapa.simbolo === 'Losango';
-
-    const simboloCor = isOval ? 'color: var(--color-accent);' : '';
-    const rowIndent = (!isLosango && indentCounter > 0) ? 'margin-left: 10px;' : '';
-
-    if (isLosango) {
-      indentCounter = 2;
-    } else if (indentCounter > 0) {
-      indentCounter--;
+          // Cria o novo HTML formatado
+          item.innerHTML = `
+            <div class="participante-container">
+              <div class="participante-nome">${nome}</div>
+              <p class="participante-responsabilidade">${responsabilidade}</p>
+            </div>
+          `;
+        }
+      });
     }
 
-    html += `
-      <div class="row mb-2 align-items-start" style="${rowIndent}">
-        <div class="col-auto fluxo-etapa-simbolo" style="${simboloCor}">${simbolo}</div>
-        <div class="col">
-          <div class="fluxo-etapa-nome">${safeText(nome)}</div>
-          <div class="fluxo-etapa-descricao">${safeText(descricao)}</div>
-        </div>
-      </div>`;
-  });
-  html += '</div>';
+    // Executa quando a página carregar
+    window.addEventListener('load', formatarParticipantes);
+  </script>
 
-  if (tabela) tabela.innerHTML = html;
-});
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
